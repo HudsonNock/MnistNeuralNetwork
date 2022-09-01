@@ -1,0 +1,44 @@
+package readingnumberstesting;
+
+import java.io.*;
+
+/**
+ *
+ * @author nockh
+ */
+public class MnistDataReader {
+    public MnistNumber[] readData(String dataFilePath, String labelFilePath) throws IOException {
+        
+        DataInputStream dataInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(dataFilePath)));
+        int magicNumber = dataInputStream.readInt();
+        int numberOfItems = dataInputStream.readInt();
+        numberOfItems = 60000;
+        int nRows = dataInputStream.readInt();
+        int nCols = dataInputStream.readInt();
+        
+        DataInputStream labelInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(labelFilePath)));
+        int labelMagicNumber = labelInputStream.readInt();
+        int numberOfLabels = labelInputStream.readInt();
+        numberOfLabels = 60000; //up to 60,000
+       
+        MnistNumber[] data = new MnistNumber[numberOfItems];
+        
+        assert numberOfItems == numberOfLabels;
+        
+        for(int i = 0; i < numberOfItems; i++)
+        {
+            double[] arr = new double[784];
+            for(int j = 0; j < 784; j++)
+            {
+                double num = dataInputStream.readUnsignedByte();
+                arr[j] = num/2000;
+            }
+            MnistNumber num = new MnistNumber(arr, labelInputStream.readUnsignedByte());
+            data[i] = num;
+        }
+        dataInputStream.close();
+        labelInputStream.close();
+        
+        return data;
+    } 
+}
