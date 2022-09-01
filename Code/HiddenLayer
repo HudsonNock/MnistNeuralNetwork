@@ -1,0 +1,360 @@
+package readingnumberstesting;
+
+/**
+ *
+ * @author nockh
+ */
+public class HiddenLayer {
+    
+    private double[][] weights;
+    private double[] bias;
+    private int numRows;
+    private int numCols;
+    private double[][] gWeights;
+    private double[] gBias;
+    private double[] gBiasAverage;
+    private double[] pastGBiasAverage;
+    private double[][] gWeightsAverage;
+    private double[][] pastGWeightsAverage;
+    private double[] output;
+    private double[] input;
+    private double[] perfect = new double[10];
+    private double[] gradiantOutput;
+    private double[] gradiantInput;
+    private int num;
+    private int layerType;
+    private double momentum = 0.99;
+    
+    public HiddenLayer(int inputSize, int outputSize, int number, int layerType1)
+    {
+        weights = new double[outputSize][inputSize];
+        numRows = outputSize;
+        numCols = inputSize;
+        layerType = layerType1;
+        
+        bias = new double[outputSize];
+        num = number;
+        
+        gWeights = new double[numRows][numCols];
+        gBias = new double[numRows];
+        gBiasAverage = new double[numRows];
+        gWeightsAverage = new double[numRows][numCols];
+        output = new double[numRows];
+        input = new double[numCols];
+        gradiantOutput = new double[numRows];
+        gradiantInput = new double[numCols];
+        pastGBiasAverage = new double[numRows];
+        for (int i = 0; i < numRows; i++)
+            pastGBiasAverage[i] = 0;
+        pastGWeightsAverage = new double[numRows][numCols];
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j < numCols; j++)
+                pastGWeightsAverage[i][j] = 0;
+        }
+        
+    }
+    
+    public void NAGchange()
+    {
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j < numCols; j++)
+            {
+                weights[i][j] -= momentum * pastGWeightsAverage[i][j];
+            }
+            bias[i] -= momentum * pastGBiasAverage[i];
+        }
+    }
+    
+    public void applyAvgBias(double learningRate, int batchAmount)
+    {
+        double gradiantChange;
+        double momentumChange;
+        for (int i = 0; i < numRows; i++)
+        {
+            gradiantChange = gBiasAverage[i] * learningRate;
+            momentumChange = momentum * pastGBiasAverage[i];
+            bias[i] -= (gradiantChange + momentumChange) / batchAmount;
+            pastGBiasAverage[i] = (gradiantChange + momentumChange) / batchAmount;
+        }
+        
+        for (int i = 0; i < numRows; i++)
+            gBiasAverage[i] = 0;
+    }
+    
+    public void applyAvgWeights(double learningRate, int batchAmount)
+    {
+        double gradiantChange;
+        double momentumChange;
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j < numCols; j++)
+            {
+                gradiantChange = gWeightsAverage[i][j] * learningRate;
+                momentumChange = momentum * pastGWeightsAverage[i][j];
+                weights[i][j] -= (gradiantChange + momentumChange) / batchAmount;
+                pastGWeightsAverage[i][j] = (gradiantChange + momentumChange) / batchAmount;
+            }
+        }
+        
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j < numCols; j++)
+                gWeightsAverage[i][j] = 0;
+        }
+    }
+    
+    public void addTempBias()
+    {
+        for (int i = 0; i < numRows; i++)
+        {
+            gBiasAverage[i] += gBias[i];
+        }
+    }
+    
+    public void addTempWeights()
+    {
+        
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j < numCols; j++)
+            {
+                gWeightsAverage[i][j] += gWeights[i][j];
+            }
+        }
+    }
+    
+    public double[] getOutput()
+    {
+        return output;
+    }
+    
+    public int getNumRows()
+    {
+        return numRows;
+    }
+    
+    public int getNumCols()
+    {
+        return numCols;
+    }
+    
+    public void setPerfect(int number)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            if (i == number)
+                perfect[i] = 1;
+            else
+                perfect[i] = 0;
+        }
+    }
+    
+    public void gradiantLayer()
+    {   
+        if (layerType == 0)
+        {
+            for (int i = 0; i < numRows; i++)
+            {
+                for (int j = 0; j < numCols; j++)
+                {
+                    //gWeights[i][j] = gradiantOutput[i] * input[j] * output[i] * (1-output[i]);
+                    gWeights[i][j] = 0;
+                    for (int k = 0; k < numRows; k++)
+                    {
+                        if (i != k)
+                            gWeights[i][j] -= gradiantOutput[k] * output[k] * output[i] * input[j];
+                        else
+                            gWeights[i][j] += gradiantOutput[k] * output[i] * input[j] * (1 - output[i]);
+                    }
+                }
+            }
+            for (int i = 0; i < numRows; i++)
+            {
+                gBias[i] = 0;
+                for (int k = 0; k < numRows; k++)
+                {
+                    if (i != k)
+                        gBias[i] -= output[k] * output[i] * gradiantOutput[k];
+                    else
+                        gBias[i] += gradiantOutput[k] * output[i] * (1-output[i]);
+                }
+                //gBias[i] = gradiantOutput[i] * output[i] * (1-output[i]);
+            }
+        }
+        else if (layerType == 1)
+        {
+            for (int i = 0; i < numRows; i++)
+            {
+                for (int j = 0; j < numCols;j++)
+                {        
+                    if (input[j] * weights[i][j] >= 0)
+                        gWeights[i][j] = input[j] * gradiantOutput[i];
+                    else
+                        gWeights[i][j] = 0;
+                }
+            }
+
+            for (int i = 0; i < numRows; i++)
+            {
+                if (bias[i] >= 0)
+                    gBias[i] = gradiantOutput[i];
+                else
+                    gBias[i] = 0;
+            }
+        }
+    }
+    
+    public void gradientOutputVectorFinal()
+    {
+        /*for (int i = 0; i < 10; i++)
+        {
+            gradiantOutput[i] = 2 * (output[i] - perfect[i]);
+        }*/
+        for (int i = 0; i < 10; i++)
+        {
+            if (perfect[i] == 1)
+                gradiantOutput[i] = -1/output[i];
+            else
+                gradiantOutput[i] = 0;
+        }
+    }
+    
+    public double[] getGradiantOutputVector()
+    {
+        return gradiantOutput;
+    }
+    
+    public void gradientInputVector()
+    {
+        //dJ/ddi = de1/ddi * dJ/de1 + ... + den/ddi * dJ/den
+        // ek = ReLU(d1 * sk1 + bk) + ... + ReLU(dm * skm + bk)
+        // di * ski + bk > 0 
+        // dek/ddi = ski
+        
+        if (num != ReadingNumbersTesting.getNumLayers() - 1)
+        {
+            gradiantOutput = ReadingNumbersTesting.getNextInputGradiant(num);
+        }
+        if (layerType == 0 && num > 0)
+        {
+            for (int i = 0; i < numCols; i++)
+            {
+                gradiantInput[i] = 0;
+                for (int j = 0; j < numRows; j++)
+                {
+                    //gradiantInput[i] = gradiantOutput[j] * weights[j][i] * input[j] * (1-input[j]);
+                    double sum = weights[j][i];
+                    for (int k = 0; k < numRows; k++)
+                        sum -= output[k] * weights[k][i];
+                    gradiantInput[i] += gradiantOutput[j] * output[j] * sum;
+                }
+            }
+        }
+        else if (layerType == 1 && num > 0)
+        {
+            for (int i = 0; i < numCols; i++)
+            {
+                gradiantInput[i] = 0;
+                for (int j = 0; j < numRows; j++)
+                {
+                    if (input[i] * weights[j][i] >= 0)
+                        gradiantInput[i] += gradiantOutput[j] * weights[j][i];
+                }
+            }
+        }
+    }
+    
+    public double[] getGradiantInput()
+    {
+        return gradiantInput;
+    }
+    
+    public double getBias(int index)
+    {
+        return bias[index];
+    }
+    
+    public void addBias(double amount, int index)
+    {
+        bias[index] += amount;
+    }
+    
+    public void setBias(double amount, int index)
+    {
+        bias[index] = amount;
+    }
+    
+    public void setWeight(int row, int col, double value)
+    {
+        weights[row][col] = value;
+    }
+    
+    public void addWeights(double[][] weight)
+    {
+        for (int i = 0; i < numRows; i++)
+        {
+            for (int j = 0; j<numCols; j++)
+            {
+                weights[i][j] -= weight[i][j];
+            }
+        }
+    }
+    
+    public double getWeight(int row, int col)
+    {
+        return weights[row][col];
+    }
+    
+    public double[] Compute(double[] arr)
+    {
+        double[] returnArr = new double[numRows];
+        if (layerType == 0)
+        {
+            input = arr;
+            for (int i = 0; i < numRows; i++)
+                returnArr[i] = 0;
+
+            for (int i = 0; i < numRows; i++)
+            {
+                for (int j = 0; j < numCols; j++)
+                {
+                    returnArr[i] += weights[i][j] * arr[j];
+                }
+                returnArr[i] += bias[i];
+                //returnArr[i] = 1/(1 + Math.exp(-returnArr[i] - bias[i]));
+            }
+            double denominator = 0;
+            for (int i = 0; i < numRows; i++)
+            {
+                denominator += Math.exp(returnArr[i]);
+            }
+            for (int i = 0; i < numRows; i++)
+            {
+                returnArr[i] = Math.exp(returnArr[i])/denominator;
+            }
+            output = returnArr;
+            return returnArr;
+            
+        }
+        else if (layerType == 1)
+        {
+            input = arr;
+            for (int i = 0; i < numRows; i++)
+                returnArr[i] = 0;
+        
+            for (int i = 0; i < numRows; i++)
+            {
+                for (int j = 0; j < numCols; j++)
+                {
+                    returnArr[i] += Math.max(weights[i][j] * arr[j], 0);
+                }
+                returnArr[i] += Math.max(bias[i], 0);
+            }
+            output = returnArr;
+            return returnArr;
+        }
+        return returnArr;
+    }
+}
