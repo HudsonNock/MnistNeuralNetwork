@@ -1,0 +1,37 @@
+package readingnumberstesting;
+
+/**
+ *
+ * @author nockh
+ */
+public class MnistNumber {
+    
+    private int num;
+    private double[] data = new double[784];
+    
+    public MnistNumber(double mat[], int label)
+    {
+       data = mat;
+       num = label;
+    }
+    
+    public void setValue(int col, int value)
+    {
+        data[col] = value;
+    }
+    
+    public double getValue(int n)
+    {
+        return data[n];
+    }
+    
+    public int getNumber()
+    {
+        return num;
+    }
+    
+    public double[] getData()
+    {
+        return data;
+    }
+}
