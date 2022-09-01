@@ -1,0 +1,465 @@
+package readingnumberstesting;
+
+import java.io.IOException;
+import java.util.Scanner;
+import java.io.*;
+import java.lang.Math;
+import java.io.PrintWriter;
+import java.io.FileInputStream;
+
+/**
+ *
+ * @author nockh
+ */
+public class ReadingNumbersTesting {
+
+    static int amountNum = 60000;
+    static int batchAmount = 100;
+    static int hiddenLayers = 3;
+    static double learningRate = 0.01;
+    static int[] hiddenLayerNodes = {784, 400, 200, 10};
+    static int[] layerType = {1, 1, 0}; //0 = Softmax, 1 = ReLU
+    public static HiddenLayer[] layers = new HiddenLayer[hiddenLayers];
+    static MnistNumber[] data;
+    static MnistNumber[] randomizedData = new MnistNumber[batchAmount];
+    static double[] scores = {-100, 100}; 
+    static int count = 0;
+    static int width = 28;
+    static int height = 28;
+    static File[] files = {new File("D:\\MnistLayer0.txt"), new File("D:\\MnistLayer1.txt"), new File("D:\\MnistLayer2.txt")}; //storing data for layers
+    static boolean loadData = true;
+    static boolean drawing = true;
+    static int drawingUpdate = 0;
+    public static double[] imageValues = new double[784];
+    
+    /**cc
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) throws IOException
+        // TODO code application logic herestatic int score(int[][] arr)
+    {
+        for (int i = 0; i < hiddenLayers; i++)
+        {
+            layers[i] = new HiddenLayer(hiddenLayerNodes[i], hiddenLayerNodes[i+1], i, layerType[i]);
+        }
+        
+        if (loadData == true)
+        {
+            FileInputStream fileInput;
+            Scanner scan;
+            for (int i = 0; i < hiddenLayers; i++)
+            {
+                System.out.println(i + "********************************");
+                try {
+                    fileInput = new FileInputStream(files[i]);
+                    scan = new Scanner(fileInput);
+                    for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                    {
+                        for (int k = 0; k < hiddenLayerNodes[i]; k++)
+                        {
+                            if (scan.hasNextDouble())
+                            {
+                                layers[i].setWeight(j, k, scan.nextDouble());
+                            }
+                            else
+                            {
+                                System.out.println("RAND");
+                                System.out.println(j + " " + k);
+                                layers[i].setWeight(j,k, Math.random() * 0.1);
+                            }
+                        }
+                    }
+                    for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                    {
+                        if (scan.hasNextDouble())
+                            layers[i].setBias(scan.nextDouble(), j);
+                        else
+                        {
+                            System.out.println("RAND");
+                            layers[i].setBias(j, 0);
+                        }
+                    }
+                    scan.close();
+                    fileInput.close();
+                } catch (FileNotFoundException e1) {
+                        System.out.println("no file found");
+                        return;
+                }
+            }
+        }
+        else
+        {
+            for (int l = 0; l < hiddenLayers; l++)
+            {
+                double b;
+                if (l != 0)
+                    b = Math.sqrt(6.0/(hiddenLayerNodes[l] + hiddenLayerNodes[l-1]));
+                else
+                    b = Math.sqrt(6.0/hiddenLayerNodes[l]);
+                for (int i = 0; i < layers[l].getNumRows(); i++)
+                {
+                    for (int j = 0; j < layers[l].getNumCols(); j++)
+                    {
+                        layers[l].setWeight(i, j, Math.random() * 2*b - b);
+                    }
+                }
+            }
+        }
+        
+        if (drawing)
+        {
+            for (int i = 0; i < 784; i++)
+            {
+                imageValues[i] = 0;
+            }
+            new DrawNumber();
+            int counter = 0;
+            while(true)
+            {
+                counter++;
+                if (counter % 1000000000 == 0)
+                {
+                    System.out.print(counter);
+                    counter = 0;
+                }
+                //System.out.print(drawingUpdate);
+                if (drawingUpdate != 0)
+                {
+                    //print(imageValues);
+                    System.out.println("B");
+                    drawingUpdate = 0;
+                    double[] probabilities = computeDrawing(imageValues, 0);
+                    System.out.println("********");
+                    double[][] probabilitiesOrdered = sortProbabilities(probabilities);
+                    
+                    for (int i = 0; i < 10; i++)
+                        System.out.println(probabilitiesOrdered[i][1] + "  -  " + probabilitiesOrdered[i][0]);
+                }
+            }
+        }
+        data = new MnistDataReader().readData("D:\\train-images-idx3-ubyte", "D:\\train-labels-idx1-ubyte");
+        
+        
+        //print(randomize(data[0]).getData());
+        /*data[0] = randomize(data[0]);
+        for (int i = 0; i < 28; i++)
+        {
+            for (int j = 0; j < 28; j++)
+            {
+                System.out.print(data[0].getValue(28*i + j));
+                if (j < 27)
+                    System.out.print(", ");
+            }
+            System.out.println(";");
+        }*/
+        
+        
+        // Loading a matrix from the start
+        
+
+        double[][] scoreArr = new double[batchAmount][10];
+        double[][] perfectScoreArr = new double[batchAmount][10];
+        int initial = (int) (Math.random() * (amountNum - batchAmount));;
+        new DrawMnist();
+        
+        while(true)
+        {
+            for (int i = 0; i < batchAmount; i++)
+            {
+                randomizedData[i] = randomize(data[i+initial]); //data[i+initial];
+            }
+            for (int i = 0; i < batchAmount; i++)
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    if (j == randomizedData[i].getNumber())
+                        perfectScoreArr[i][j] = 1;
+                    else
+                        perfectScoreArr[i][j] = 0;
+                }
+            }
+            for (int i = 0; i < batchAmount; i++)
+            {
+                scoreArr[i] = compute(i, 0);
+                
+                layers[hiddenLayers-1].setPerfect(randomizedData[i].getNumber());
+                layers[hiddenLayers-1].gradientOutputVectorFinal();
+                for (int j = hiddenLayers-1; j >= 0; j--)
+                {
+                    layers[j].gradientInputVector();
+                }
+                for (int j = hiddenLayers-1; j >= 0; j--)
+                    layers[j].gradiantLayer();
+
+                for (int j = 0; j < hiddenLayers; j++)
+                {
+                    layers[j].addTempBias();
+                    layers[j].addTempWeights();
+                }
+            }
+            
+            for (int j = 0; j < hiddenLayers; j++)
+            {
+                layers[j].applyAvgBias(learningRate, batchAmount);
+                layers[j].applyAvgWeights(learningRate, batchAmount);
+            }
+            System.out.println("Scoreee");
+            Score(scoreArr, perfectScoreArr);
+            success(scoreArr, perfectScoreArr);
+            System.out.println(learningRate);
+            //initial += batchAmount;
+            //if (initial > amountNum - batchAmount)
+            //    initial = 0;
+            initial = (int) (Math.random() * (amountNum - batchAmount));
+        }
+    }
+    
+    public static double[] getData()
+    {
+        double[] returnArr = new double[784 * 2];
+        int index = (int) (Math.random() * amountNum);
+        double[] temp = data[index].getData();
+        double[] temp2 = randomize(data[index]).getData();
+        for (int i = 0; i < 784; i++)
+        {
+            returnArr[i] = temp2[i];
+            returnArr[i + 784] = temp[i];
+        }
+        return returnArr;
+    }
+    
+    public static void Score(double[][] scoreArr, double[][] perfectScore)
+    {
+        double score = 0;
+        for (int i = 0; i < batchAmount; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                //score += (scoreArr[i][j] - perfectScore[i][j]) *(scoreArr[i][j] - perfectScore[i][j]);
+                if (perfectScore[i][j] == 1)
+                {
+                    score -= Math.log(scoreArr[i][j]);
+                }
+            }
+        }
+        System.out.println(score);
+        count += batchAmount;
+        if (count > amountNum * 0.5)
+        {
+            count = 0;
+            scores[0] = scores[1];
+            scores[1] = score;
+            if (scores[0] <= scores[1])
+            {
+                learningRate *= 0.9;
+                System.out.println("learningRate: " + learningRate);
+            }
+            
+            for (int i = 0; i < hiddenLayers; i++)
+            {
+                try {
+                    new PrintWriter(files[i]).close();
+                    try {
+                        PrintWriter pw = new PrintWriter(files[i]);
+                        for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                        {
+                            for (int k = 0; k < hiddenLayerNodes[i]; k++)
+                            {
+                                pw.println(layers[i].getWeight(j,k));
+                            }
+                        }
+                        for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                        {
+                            pw.println(layers[i].getBias(j));
+                        }
+                        pw.flush();
+                    }
+                    catch (IOException e)
+                    {
+                        for (int k = 0; k < 100; k++)
+                            System.out.println("File Writer error");
+                        return;
+                    }
+                }
+                catch (FileNotFoundException e1){
+                    System.out.println("File not found error");
+                    return;
+                }
+            }
+            for (int i = 0; i < 10; i++)
+                System.out.println("Loaded");
+        }
+    }
+    
+    private static void success(double[][] scoreArr, double[][] perfectScore)
+    {
+        double max;
+        int success = 0;
+        int guess = 0;
+        
+        for (int i = 0; i < batchAmount; i++)
+        {
+            max = scoreArr[i][0];
+            guess = 0;
+            for (int j = 1; j < 10; j++)
+            {
+                if (scoreArr[i][j] > max)
+                {
+                    max = scoreArr[i][j];
+                    guess = j;
+                }
+            }
+            if (perfectScore[i][guess] == 1)
+                success++;
+        }
+        
+        System.out.println(success);
+    }
+    
+    public static double[] getNextInputGradiant(int num)
+    {
+        return layers[num+1].getGradiantInput();
+    }
+    
+    public static int getNumLayers()
+    {
+        return hiddenLayers;
+    }
+    
+    private static double[] compute(int index, int layer)
+    {
+        if (layer < hiddenLayers - 1)
+        {
+            layer++;
+            double[] returnVal = layers[hiddenLayers-layer].Compute(compute(index, layer));
+            return returnVal;
+        }
+        else
+            return layers[0].Compute(randomizedData[index].getData());
+    }
+    
+    private static double[] computeDrawing(double[] data, int layer)
+    {
+        if (layer < hiddenLayers - 1)
+        {
+            layer++;
+            double[] returnVal = layers[hiddenLayers-layer].Compute(computeDrawing(data, layer));
+            return returnVal;
+        }
+        else
+            return layers[0].Compute(data);
+    }
+    
+    private static MnistNumber randomize(MnistNumber num)
+    {
+        double[] returnNum = new double[width*height];
+        double theta = 0;//Math.random() * 3.142 / 8 - 3.142/16;
+        double scaleFactor =  Math.random() * 0.7 + 0.7;
+        double translationX = (int)(Math.random() * 6 - 3);
+        double translationY = (int)(Math.random() * 6 - 3);
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                int x = j - width/2;
+                int y = i - height/2;
+                //int xNew = (int) ((Math.cos(theta) * x - Math.sin(theta) * y) * scaleFactor + translationX);
+                int xNew = (int) ((x + translationX) * scaleFactor);
+                if (xNew < -width/2)
+                    xNew = -width/2;
+                if (xNew > width/2 - 1)
+                    xNew = width/2 - 1;
+                //int yNew = (int) ((Math.sin(theta) * x + Math.cos(theta) * y) * scaleFactor + translationY);
+                int yNew = (int) ((y + translationY ) * scaleFactor);
+                if (yNew < -height/2)
+                    yNew = -height/2;
+                if (yNew > height/2 -1)
+                    yNew = height/2 - 1;
+                returnNum[width*i + j] = num.getValue(width * (yNew + height/2) + (xNew + width/2));
+            }
+        }
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                if (Math.random() < 0.10)
+                {
+                    if (returnNum[width*i + j] == 0)
+                        returnNum[width*i + j] = (Math.random() * 0.015);
+                }
+            }
+        }
+        return new MnistNumber(returnNum, num.getNumber());
+    }
+    
+    public static void updateDrawingUpdate()
+    {
+        drawingUpdate++;
+        //System.out.println(drawingUpdate);
+    }
+    
+    public static void updateImageValues(int row, int col, double value)
+    {
+        imageValues[28 * row + col] = value;
+        //System.out.println(imageValues[28*row + col]);
+        //System.out.println(row);
+        //System.out.println(col);
+    }
+    
+    private static double[][] sortProbabilities(double[] probabilities)
+    {
+        double[][] returnProbabilities = new double[10][2];
+        returnProbabilities[0][0] = probabilities[0];
+        returnProbabilities[0][1] = 0;
+        int numSorted = 1;
+        boolean fit = false;
+        for (int i = 1; i < 10; i++)
+        {
+            for (int j = 0; j < numSorted; j++)
+            {
+                if (probabilities[i] > returnProbabilities[j][0])
+                {
+                    for (int k = numSorted-1; k >= j; k--)
+                    {
+                        returnProbabilities[k+1][0] = returnProbabilities[k][0];
+                        returnProbabilities[k+1][1] = returnProbabilities[k][1];
+                    }
+                    returnProbabilities[j][0] = probabilities[i];
+                    returnProbabilities[j][1] = i;
+                    fit = true;
+                    break;
+                }
+            }
+            if (fit == false)
+            {
+                returnProbabilities[numSorted][0] = probabilities[i];
+                returnProbabilities[numSorted][1] = i;
+            }
+            numSorted++;
+            fit = false;
+        }
+        
+        return returnProbabilities;
+    }
+    
+    public static void clearDrawing()
+    {
+        for (int i = 0; i < 784; i++)
+            imageValues[i] = 0;
+        drawingUpdate++;
+    }
+    
+    private static void print(double[] arr)
+    {
+        for (int i = 0; i < 28; i++)
+        {
+            for (int j = 0; j < 28; j++)
+            {
+                if (j != 27)
+                    System.out.print(arr[i*28 + j] + ", ");
+                else
+                    System.out.println(arr[i*28 + j] + ";");
+            }
+        }
+    }
+}
