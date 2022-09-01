@@ -1,0 +1,85 @@
+package readingnumberstesting;
+import java.awt.*;
+import java.awt.event.*;
+
+
+/**
+ *
+ * @author nockh
+ */
+public class DrawNumber extends Frame implements MouseMotionListener, KeyListener {
+    
+    DrawNumber()
+    {
+        addMouseMotionListener(this);
+        addKeyListener(this);
+        
+        setSize(784,784);
+        setBackground(Color.BLACK);
+        setLayout(null);
+        setVisible(true);
+    }
+    
+    public void mouseDragged(MouseEvent e)
+    {
+        int cornerX = e.getX() - e.getX() % 28;
+        int cornerY = e.getY() - e.getY() % 28;
+        System.out.println(cornerX);
+        Graphics g = getGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(cornerX, cornerY, 28, 28);
+        ReadingNumbersTesting.updateImageValues(cornerY/28, cornerX/28, 255/2000.0);
+        if (cornerX > 0)
+        {
+            g.fillRect(cornerX-28, cornerY, 28, 28);
+            ReadingNumbersTesting.updateImageValues(cornerY/28, cornerX/28 - 1, 0.1275);
+        }
+        if (cornerX < 784-28)
+        {
+            g.fillRect(cornerX+28, cornerY, 28, 28);
+            ReadingNumbersTesting.updateImageValues(cornerY/28, cornerX/28 + 1, 0.1275);
+        }
+        if (cornerY > 0)
+        {
+            g.fillRect(cornerX, cornerY-28, 28, 28);
+            ReadingNumbersTesting.updateImageValues(cornerY/28 - 1, cornerX/28, 0.1275);
+        }
+        if (cornerY < 784 - 28)
+        {
+            g.fillRect(cornerX, cornerY+28, 28, 28);
+            ReadingNumbersTesting.updateImageValues(cornerY/28 + 1, cornerX/28, 0.1275);
+        }
+        ReadingNumbersTesting.updateDrawingUpdate();
+    }
+    
+    public void keyPressed(KeyEvent e)
+    {
+        if (e.getKeyChar() == 'c')
+        {
+            Graphics g = getGraphics();
+            g.clearRect(0,0, 784, 784);
+            ReadingNumbersTesting.clearDrawing();
+        }
+    }
+    
+    public void keyReleased(KeyEvent e)
+    {
+        
+    }
+    
+    public void keyTyped(KeyEvent e)
+    {
+        
+    }
+    
+    public void mouseMoved(MouseEvent e)
+    {
+        
+    }
+    
+    public static Color getPixelColor(int x, int y) throws AWTException
+    {
+        Robot rb = new Robot();
+        return rb.getPixelColor(x,y);
+    }
+}
