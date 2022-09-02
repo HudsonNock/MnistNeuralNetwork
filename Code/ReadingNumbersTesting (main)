@@ -15,11 +15,11 @@ public class ReadingNumbersTesting {
 
     static int amountNum = 60000;
     static int batchAmount = 100;
-    static int hiddenLayers = 3;
+    static int hiddenLayers;
     static double learningRate = 0.01;
     static int[] hiddenLayerNodes = {784, 400, 200, 10};
     static int[] layerType = {1, 1, 0}; //0 = Softmax, 1 = ReLU
-    public static HiddenLayer[] layers = new HiddenLayer[hiddenLayers];
+    public static HiddenLayer[] layers; 
     static MnistNumber[] data;
     static MnistNumber[] randomizedData = new MnistNumber[batchAmount];
     static double[] scores = {-100, 100}; 
@@ -38,6 +38,9 @@ public class ReadingNumbersTesting {
     public static void main(String[] args) throws IOException
         // TODO code application logic herestatic int score(int[][] arr)
     {
+        hiddenLayers = hiddenLayerNodes.length - 1;
+        layers = new HiddenLayer[hiddenLayers];
+        
         for (int i = 0; i < hiddenLayers; i++)
         {
             layers[i] = new HiddenLayer(hiddenLayerNodes[i], hiddenLayerNodes[i+1], i, layerType[i]);
