@@ -8,169 +8,75 @@ import java.io.PrintWriter;
 import java.io.FileInputStream;
 
 /**
- *
+ * Mnist Neural network, that trains to classify hand written digits
  * @author nockh
  */
 public class ReadingNumbersTesting {
 
+    //changeable variables
     static int amountNum = 60000;
     static int batchAmount = 100;
-    static int hiddenLayers;
     static double learningRate = 0.01;
     static int[] hiddenLayerNodes = {784, 400, 200, 10};
     static int[] layerType = {1, 1, 0}; //0 = Softmax, 1 = ReLU
-    public static HiddenLayer[] layers; 
+    static File[] files = {new File("D:\\MnistLayer0.txt"), new File("D:\\MnistLayer1.txt"), new File("D:\\MnistLayer2.txt")}; //storing data for layers
+    static boolean loadData = true;
+    static boolean drawing = true;
+    
+    //do not change these variables
+    static int hiddenLayers;
+    public static HiddenLayer[] layers;
     static MnistNumber[] data;
     static MnistNumber[] randomizedData = new MnistNumber[batchAmount];
     static double[] scores = {-100, 100}; 
     static int count = 0;
     static int width = 28;
     static int height = 28;
-    static File[] files = {new File("D:\\MnistLayer0.txt"), new File("D:\\MnistLayer1.txt"), new File("D:\\MnistLayer2.txt")}; //storing data for layers
-    static boolean loadData = true;
-    static boolean drawing = true;
     static int drawingUpdate = 0;
     public static double[] imageValues = new double[784];
     
-    /**cc
-     * @param args the command line arguments
-     */
     public static void main(String[] args) throws IOException
-        // TODO code application logic herestatic int score(int[][] arr)
     {
+        //create new layer objects
         hiddenLayers = hiddenLayerNodes.length - 1;
         layers = new HiddenLayer[hiddenLayers];
-        
         for (int i = 0; i < hiddenLayers; i++)
         {
             layers[i] = new HiddenLayer(hiddenLayerNodes[i], hiddenLayerNodes[i+1], i, layerType[i]);
         }
         
+        //loading layer data
         if (loadData == true)
-        {
-            FileInputStream fileInput;
-            Scanner scan;
-            for (int i = 0; i < hiddenLayers; i++)
-            {
-                System.out.println(i + "********************************");
-                try {
-                    fileInput = new FileInputStream(files[i]);
-                    scan = new Scanner(fileInput);
-                    for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
-                    {
-                        for (int k = 0; k < hiddenLayerNodes[i]; k++)
-                        {
-                            if (scan.hasNextDouble())
-                            {
-                                layers[i].setWeight(j, k, scan.nextDouble());
-                            }
-                            else
-                            {
-                                System.out.println("RAND");
-                                System.out.println(j + " " + k);
-                                layers[i].setWeight(j,k, Math.random() * 0.1);
-                            }
-                        }
-                    }
-                    for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
-                    {
-                        if (scan.hasNextDouble())
-                            layers[i].setBias(scan.nextDouble(), j);
-                        else
-                        {
-                            System.out.println("RAND");
-                            layers[i].setBias(j, 0);
-                        }
-                    }
-                    scan.close();
-                    fileInput.close();
-                } catch (FileNotFoundException e1) {
-                        System.out.println("no file found");
-                        return;
-                }
-            }
-        }
+            loadLayerData();
         else
-        {
-            for (int l = 0; l < hiddenLayers; l++)
-            {
-                double b;
-                if (l != 0)
-                    b = Math.sqrt(6.0/(hiddenLayerNodes[l] + hiddenLayerNodes[l-1]));
-                else
-                    b = Math.sqrt(6.0/hiddenLayerNodes[l]);
-                for (int i = 0; i < layers[l].getNumRows(); i++)
-                {
-                    for (int j = 0; j < layers[l].getNumCols(); j++)
-                    {
-                        layers[l].setWeight(i, j, Math.random() * 2*b - b);
-                    }
-                }
-            }
-        }
+            loadRandomData();
         
+        //Lets the user draw their own numbers
         if (drawing)
-        {
-            for (int i = 0; i < 784; i++)
-            {
-                imageValues[i] = 0;
-            }
-            new DrawNumber();
-            int counter = 0;
-            while(true)
-            {
-                counter++;
-                if (counter % 1000000000 == 0)
-                {
-                    System.out.print(counter);
-                    counter = 0;
-                }
-                //System.out.print(drawingUpdate);
-                if (drawingUpdate != 0)
-                {
-                    //print(imageValues);
-                    System.out.println("B");
-                    drawingUpdate = 0;
-                    double[] probabilities = computeDrawing(imageValues, 0);
-                    System.out.println("********");
-                    double[][] probabilitiesOrdered = sortProbabilities(probabilities);
-                    
-                    for (int i = 0; i < 10; i++)
-                        System.out.println(probabilitiesOrdered[i][1] + "  -  " + probabilitiesOrdered[i][0]);
-                }
-            }
-        }
+            drawNumberUI();
+        
+        //loads Mnist dataset
         data = new MnistDataReader().readData("D:\\train-images-idx3-ubyte", "D:\\train-labels-idx1-ubyte");
         
-        
-        //print(randomize(data[0]).getData());
-        /*data[0] = randomize(data[0]);
-        for (int i = 0; i < 28; i++)
-        {
-            for (int j = 0; j < 28; j++)
-            {
-                System.out.print(data[0].getValue(28*i + j));
-                if (j < 27)
-                    System.out.print(", ");
-            }
-            System.out.println(";");
-        }*/
-        
-        
-        // Loading a matrix from the start
-        
-
+        //scoreArr records the output for each number
         double[][] scoreArr = new double[batchAmount][10];
+        //perfectScoreArr records the expected output for each number
         double[][] perfectScoreArr = new double[batchAmount][10];
-        int initial = (int) (Math.random() * (amountNum - batchAmount));;
+        //assigns a random initial index for the batch amount
+        int initial = (int) (Math.random() * (amountNum - batchAmount));
+        //draws a random Mnist number, along with its randomized (adding noise and transformations) counterpart
         new DrawMnist();
         
+        //loop for training the layers
         while(true)
         {
+            //randomizes (adding noise and transfomations) the data in the batch data
             for (int i = 0; i < batchAmount; i++)
             {
-                randomizedData[i] = randomize(data[i+initial]); //data[i+initial];
+                randomizedData[i] = randomize(data[i+initial]);
             }
+            
+            //loads the expected solutions
             for (int i = 0; i < batchAmount; i++)
             {
                 for (int j = 0; j < 10; j++)
@@ -181,8 +87,11 @@ public class ReadingNumbersTesting {
                         perfectScoreArr[i][j] = 0;
                 }
             }
+            
+            //calculate the average gradiant for each layer
             for (int i = 0; i < batchAmount; i++)
             {
+                
                 scoreArr[i] = compute(i, 0);
                 
                 layers[hiddenLayers-1].setPerfect(randomizedData[i].getNumber());
@@ -201,23 +110,140 @@ public class ReadingNumbersTesting {
                 }
             }
             
+            //applys the average graidant to each weight and bias in each layer
             for (int j = 0; j < hiddenLayers; j++)
             {
                 layers[j].applyAvgBias(learningRate, batchAmount);
                 layers[j].applyAvgWeights(learningRate, batchAmount);
             }
-            System.out.println("Scoreee");
+            
+            //prints "Score" which is the cost value, and success, which is the
+            //number of Mnist numbers that it got correct out of the batch amount
+            System.out.println("Score and success");
             Score(scoreArr, perfectScoreArr);
             success(scoreArr, perfectScoreArr);
             System.out.println(learningRate);
-            //initial += batchAmount;
-            //if (initial > amountNum - batchAmount)
-            //    initial = 0;
+            
+            //changes to another random batch amount
             initial = (int) (Math.random() * (amountNum - batchAmount));
         }
     }
     
-    public static double[] getData()
+    //lets the user draw a hand written digit
+    private static void drawNumberUI()
+    {
+        //resets imageValue
+        for (int i = 0; i < 784; i++)
+        {
+            imageValues[i] = 0;
+        }
+        
+        new DrawNumber();
+        int counter = 0;
+        while(true)
+        {
+            counter++;
+            //not sure why but if I don't print to terminal it doesn't 
+            //register the drawing
+            if (counter % 1000000000 == 0)
+            {
+                System.out.print(" ");
+                counter = 0;
+            }
+            //only updates drawing when mouse is clicked
+            if (drawingUpdate != 0)
+            {
+                drawingUpdate = 0;
+                //calculate new guess from neural network
+                double[] probabilities = computeDrawing(imageValues, 0);
+                System.out.println("********");
+                //order the numbers by probabilites
+                double[][] probabilitiesOrdered = sortProbabilities(probabilities);
+                
+                //prints the neural networks guess with the probabilities
+                for (int i = 0; i < 10; i++)
+                    System.out.println(probabilitiesOrdered[i][1] + "  -  " + probabilitiesOrdered[i][0]);
+            }
+        }
+    }
+    
+    //loads saved data into the layers
+    private static void loadLayerData() throws IOException
+    {
+        FileInputStream fileInput;
+        Scanner scan;
+        for (int i = 0; i < hiddenLayers; i++)
+        {
+            //prints which layer its on
+            System.out.print("Loading Layer: " + i + " ...  ");
+            try {
+                fileInput = new FileInputStream(files[i]);
+                scan = new Scanner(fileInput);
+                //loading weights
+                for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                {
+                    for (int k = 0; k < hiddenLayerNodes[i]; k++)
+                    {
+                        if (scan.hasNextDouble())
+                        {
+                            layers[i].setWeight(j, k, scan.nextDouble());
+                        }
+                        else
+                        {
+                            //incase it can't find another double, assigns random value
+                            System.out.println("error, can not find double value, so assigned random value instead on weight index: " + j + ", " + k);
+                            layers[i].setWeight(j,k, Math.random() * 0.1);
+                        }
+                    }
+                }
+                //loading biases
+                for (int j = 0; j < hiddenLayerNodes[i+1]; j++)
+                {
+                    if (scan.hasNextDouble())
+                        layers[i].setBias(scan.nextDouble(), j);
+                    else
+                    {
+                        //incase can't find another double, assings random value
+                        System.out.println("error, can not find double value, so assigned random value instead on bias index: " + j);
+                        layers[i].setBias(j, 0);
+                    }
+                }
+                scan.close();
+                fileInput.close();
+                System.out.println("Loaded");
+            } catch (FileNotFoundException e1) {
+                    System.out.println("no file found");
+                    return;
+            }
+        }
+    }
+    
+    //loads layers with random data
+    private static void loadRandomData()
+    {
+        for (int l = 0; l < hiddenLayers; l++)
+        {
+            //gets inveral from -b to b
+            double b;
+            if (l != 0)
+                b = Math.sqrt(6.0/(hiddenLayerNodes[l] + hiddenLayerNodes[l-1]));
+            else
+                b = Math.sqrt(6.0/hiddenLayerNodes[l]);
+            //applies random value from -b to b
+            for (int i = 0; i < layers[l].getNumRows(); i++)
+            {
+                for (int j = 0; j < layers[l].getNumCols(); j++)
+                {
+                    layers[l].setWeight(i, j, Math.random() * 2*b - b);
+                }
+            }
+        }
+    }
+    
+    //returns random Mnist number, first 784 is unchanged, and the second 784 slots
+    //are the randomized version of the Mnist number
+    //Used in DrawMnist class
+    public static double[] getRandomNumber()
     {
         double[] returnArr = new double[784 * 2];
         int index = (int) (Math.random() * amountNum);
@@ -231,24 +257,32 @@ public class ReadingNumbersTesting {
         return returnArr;
     }
     
-    public static void Score(double[][] scoreArr, double[][] perfectScore)
+    //returns the Cost Function value of how it preformed during a batch
+    private static void Score(double[][] scoreArr, double[][] perfectScore)
     {
         double score = 0;
+        //calculates cost function using cross entropy
         for (int i = 0; i < batchAmount; i++)
         {
             for (int j = 0; j < 10; j++)
             {
-                //score += (scoreArr[i][j] - perfectScore[i][j]) *(scoreArr[i][j] - perfectScore[i][j]);
                 if (perfectScore[i][j] == 1)
                 {
                     score -= Math.log(scoreArr[i][j]);
                 }
             }
         }
+        //Prints the cost
         System.out.println(score);
+        //increases count value
         count += batchAmount;
+        
+        //if completed half an epoch then updates learning rate if 
+        //there has been a plateau, and saves new data for weights and baises
         if (count > amountNum * 0.5)
         {
+            //checks if the new score is greater than the old score,
+            //if so then a plateau, then decrease learning rate
             count = 0;
             scores[0] = scores[1];
             scores[1] = score;
@@ -258,6 +292,8 @@ public class ReadingNumbersTesting {
                 System.out.println("learningRate: " + learningRate);
             }
             
+            //clears weights and baises data from files and
+            //rewrites the files with new data
             for (int i = 0; i < hiddenLayers; i++)
             {
                 try {
@@ -294,12 +330,15 @@ public class ReadingNumbersTesting {
         }
     }
     
+    //calculates and prints the number of correct guesses out of the batch
     private static void success(double[][] scoreArr, double[][] perfectScore)
     {
         double max;
         int success = 0;
         int guess = 0;
         
+        //runs maximization algorithm to get the guess
+        //if guess is correct then increment success
         for (int i = 0; i < batchAmount; i++)
         {
             max = scoreArr[i][0];
@@ -319,16 +358,22 @@ public class ReadingNumbersTesting {
         System.out.println(success);
     }
     
+    //returns the next layers input vector graidant
+    //used so layers can communicate between themselves
     public static double[] getNextInputGradiant(int num)
     {
         return layers[num+1].getGradiantInput();
     }
     
+    //returns the number of layers in the neural network
     public static int getNumLayers()
     {
         return hiddenLayers;
     }
     
+    //Runs data from randomizedData array with index: 'index' through all the layers
+    //call the function starting with layer 0
+    //returns scoreArr for the data
     private static double[] compute(int index, int layer)
     {
         if (layer < hiddenLayers - 1)
@@ -341,6 +386,9 @@ public class ReadingNumbersTesting {
             return layers[0].Compute(randomizedData[index].getData());
     }
     
+    //runs data inputed through the neural network
+    //returns scoreArr for the data
+    //Recursive function, call function with layer = 0
     private static double[] computeDrawing(double[] data, int layer)
     {
         if (layer < hiddenLayers - 1)
@@ -353,10 +401,12 @@ public class ReadingNumbersTesting {
             return layers[0].Compute(data);
     }
     
+    //Takes a MnistNumber and randomly applies transformations, scales the image, and rotates the image
     private static MnistNumber randomize(MnistNumber num)
     {
         double[] returnNum = new double[width*height];
-        double theta = 0;//Math.random() * 3.142 / 8 - 3.142/16;
+        //theta = 0, since I found rotation doesn't increase test data accuracy
+        double theta = 0;
         double scaleFactor =  Math.random() * 0.7 + 0.7;
         double translationX = (int)(Math.random() * 6 - 3);
         double translationY = (int)(Math.random() * 6 - 3);
@@ -366,13 +416,11 @@ public class ReadingNumbersTesting {
             {
                 int x = j - width/2;
                 int y = i - height/2;
-                //int xNew = (int) ((Math.cos(theta) * x - Math.sin(theta) * y) * scaleFactor + translationX);
                 int xNew = (int) ((x + translationX) * scaleFactor);
                 if (xNew < -width/2)
                     xNew = -width/2;
                 if (xNew > width/2 - 1)
                     xNew = width/2 - 1;
-                //int yNew = (int) ((Math.sin(theta) * x + Math.cos(theta) * y) * scaleFactor + translationY);
                 int yNew = (int) ((y + translationY ) * scaleFactor);
                 if (yNew < -height/2)
                     yNew = -height/2;
@@ -395,20 +443,21 @@ public class ReadingNumbersTesting {
         return new MnistNumber(returnNum, num.getNumber());
     }
     
+    //updates 'drawingUpdate', is called whenever the mouse is clicked
+    //while drawing a number
     public static void updateDrawingUpdate()
     {
         drawingUpdate++;
-        //System.out.println(drawingUpdate);
     }
     
+    //updates stored image Values from drawing numbers
     public static void updateImageValues(int row, int col, double value)
     {
         imageValues[28 * row + col] = value;
-        //System.out.println(imageValues[28*row + col]);
-        //System.out.println(row);
-        //System.out.println(col);
     }
     
+    //sorts the scoreArr from the neural network
+    //where index 0 is the highest score, and index 9 is lowest
     private static double[][] sortProbabilities(double[] probabilities)
     {
         double[][] returnProbabilities = new double[10][2];
@@ -445,24 +494,11 @@ public class ReadingNumbersTesting {
         return returnProbabilities;
     }
     
+    //resets the drawing canvas
     public static void clearDrawing()
     {
         for (int i = 0; i < 784; i++)
             imageValues[i] = 0;
         drawingUpdate++;
-    }
-    
-    private static void print(double[] arr)
-    {
-        for (int i = 0; i < 28; i++)
-        {
-            for (int j = 0; j < 28; j++)
-            {
-                if (j != 27)
-                    System.out.print(arr[i*28 + j] + ", ");
-                else
-                    System.out.println(arr[i*28 + j] + ";");
-            }
-        }
     }
 }
