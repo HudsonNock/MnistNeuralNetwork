@@ -1,4 +1,4 @@
-# MnistNeuralNetwork
+# MNIST Neural Network
 
 The Mnist dataset is a collection of 60 thousand 28x28 handwritten digits which is commonly used to train basic neural networks in image classification. 
 
@@ -13,9 +13,15 @@ Key elements in the neural network include:
 * Data saver for the weights and biases
 * Data loaded to load in previous weights and biases
 
-Additionally, to ensure the neural network wasn't overfitting data, I added a randomize function to the mnist dataset which rotates, translates, and adds noise to each number so that the network learns more general patterns. While the model is training a screen is displayed where you can press 'c' to see what the numbers in the mnist dataset look like before and after randomization.
+# Problems Encountered
+
+Although the neural network was classifying the MNIST handwritten digits well, it was overfitting the data and unable to classify my handwritten digits. To fix this I added a randomize function to the mnist dataset which rotates, translates, and adds noise to each number so that the network learns more general patterns. While the model is training a screen is displayed where you can press 'c' to see what the numbers in the mnist dataset look like before and after randomization.
+
+# User Interface
 
 There is also an option to draw numbers where you can draw your own number and have the program classify it for you, the output is a probability distribution of what number it thinks it most likely is.
+
+# Results 
 
 The classification after training is far from perfect, where training on mnist data gets around 95% but randomized mnist data gets up to 60-70%, further improvements can be added by extending it to a convolutional neural network, however, for now I am satisfied with the progress I made and don't have time to continue adding to the project.
 
