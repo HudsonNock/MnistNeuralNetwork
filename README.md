@@ -19,7 +19,9 @@ Although the neural network was classifying the MNIST handwritten digits well, i
 
 # User Interface
 
-There is also an option to draw numbers where you can draw your own number and have the program classify it for you, the output is a probability distribution of what number it thinks it most likely is.
+There is also an option to draw numbers where you can draw your own number (setting drawing = true) and have the program classify it for you, the output is a probability distribution of what number it thinks it most likely is. To clear the screen you can press 'c'.
+
+When the neural network is training you a window opens which displayes a MNIST number and the corresponding number when put through the ranodmized function. To get a new number you can press 'c'.
 
 # Results 
 
