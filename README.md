@@ -4,9 +4,9 @@ The Mnist dataset is a collection of 60 thousand 28x28 handwritten digits which 
 
 In this project I coded from scratch a neural network to classify the handwritten digits. 
 Key elements in the neural network include:
-* Backpropogation
+* Backpropagation
 * Momentum
-* BatchTraining
+* Batch Training
 * decreasing learning rate
 * Flexibility to easily change the number of layers as well as the activation function (ReLU or softmax) and the size of each layer
 * Cross-entropy (for this reason the last layer should be a softmax activation function)
