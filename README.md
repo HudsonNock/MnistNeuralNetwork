@@ -25,7 +25,7 @@ When the neural network is training you a window opens which displayes a MNIST n
 
 # Results 
 
-The classification after training is far from perfect, where training on mnist data gets around 95% but randomized mnist data gets up to 60-70%, further improvements can be added by extending it to a convolutional neural network, however, for now I am satisfied with the progress I made and don't have time to continue adding to the project.
+The classification after training is far from perfect, where training on mnist data gets around 95% but randomized mnist data gets up to 60-70%, further improvements can be added by extending it to a convolutional neural network.
 
 # Variables you can change
 
